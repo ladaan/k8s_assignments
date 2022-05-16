@@ -1,0 +1,15 @@
+I have change the time to run every minute */1 * * * *
+
+[root@ip-172-31-25-170 04-controllers]# kubectl get cronjob batch-job-every-fifteen-minutes
+
+5.
+[root@ip-172-31-25-170 04-controllers]# kubectl get cronjob batch-job-every-fifteen-minutes
+NAME                              SCHEDULE      SUSPEND   ACTIVE   LAST SCHEDULE   AGE
+batch-job-every-fifteen-minutes   */1 * * * *   False     2        22s             6m
+
+
+
+6. kubectl patch cronjobs batch-job-every-fifteen-minutes -p '{"spec" : {"suspend" : true }}'
+
+7. Jobs creates pods and do jobs until specified number of them terminates.
+   Cronjobs runs tasks at specified time.
