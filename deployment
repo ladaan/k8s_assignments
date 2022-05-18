@@ -1,0 +1,16 @@
+when I use 09-deployments/kubia-deployment-and-service-v1.yaml
+and change replica to 1 within the file 
+
+
+spec:
+  selector:
+    matchLabels:
+      app: kubia
+  replicas: 1
+
+
+I will change the number of replicas by command:
+
+# kubectl scale deployment/kubia --replicas=3
+
+Now if one pod fails then there will be other pods to handle the traffic as a service is bound to it too.
