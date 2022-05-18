@@ -2,3 +2,8 @@ DaemonSet makes sure and application is deployed on each worker node.
 Whilst replica set makes sure the app runs on configured scale (e.g. 3 pods) and does not ensure it will be on all workers.
 
 It means deamon set makes sure the app is available on each worker node.
+
+Use cases:
+- running a cluster storage daemon on every node
+- running a logs collection daemon on every node
+- running a node monitoring daemon on every node
