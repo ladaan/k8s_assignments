@@ -1,0 +1,25 @@
+with use of 09-deployments/kubia-deployment-and-service-v1.yaml
+
+I have changed the service to nodePort with command
+# kubectl patch svc kubia --type='json' -p '[{"op":"replace","path":"/spec/type","value":"NodePort"},{"op":"replace", "path":"/spec/ports/0/nodePort","value":31000}]'
+
+# kubectl get svc -o wide
+- checks whether the PORT(S) contains e.g. 80:31000/TCP
+
+
+# kubectl describe svc kubia
+- checks whether the NodePort is set e.g. 31000/TCP
+
+I can also check via
+# kubectl get pods
+NAME                     READY   STATUS    RESTARTS   AGE
+kubia-59d857b444-5c9l7   1/1     Running   0          23m
+kubia-59d857b444-rpdl6   1/1     Running   0          20m
+kubia-59d857b444-xnswb   1/1     Running   0          20m
+
+# kubectl logs kubia-59d857b444-5c9l7
+Kubia server starting...
+Received request from ::ffff:172.31.25.170
+Received request from ::ffff:172.31.25.170
+Received request from ::ffff:172.31.25.170
+Received request from ::ffff:172.31.25.170
