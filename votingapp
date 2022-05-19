@@ -1,0 +1,95 @@
+1) Created environment as assigned
+2) Service has an external port (nodePort) assigned. 
+# kubectl get svc
+NAME     TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)          AGE
+db       ClusterIP   10.98.24.156    <none>        5432/TCP         35s
+redis    ClusterIP   10.106.131.46   <none>        6379/TCP         35s
+result   NodePort    10.105.228.71   <none>        5001:31001/TCP   35s
+vote     NodePort    10.110.141.35   <none>        5000:31000/TCP   34s
+
+3) Current pods
+[root@ip-172-31-25-170 k8s-specifications]# kubectl get po
+NAME                      READY   STATUS    RESTARTS   AGE
+db-b54cd94f4-bw8wq        1/1     Running   0          2m4s
+redis-868d64d78-vdrvj     1/1     Running   0          2m4s
+result-5d57b59f4b-66g4h   1/1     Running   0          2m4s
+vote-94849dc97-4f9hw      1/1     Running   0          2m3s
+worker-dd46d7584-sw7kr    1/1     Running   0          2m3s
+
+4) Deleting voting pod
+[root@ip-172-31-25-170 k8s-specifications]# kubectl delete po vote-94849dc97-4f9hw
+pod "vote-94849dc97-4f9hw" deleted
+
+[root@ip-172-31-25-170 k8s-specifications]# kubectl get po
+NAME                      READY   STATUS    RESTARTS   AGE
+db-b54cd94f4-bw8wq        1/1     Running   0          2m53s
+redis-868d64d78-vdrvj     1/1     Running   0          2m53s
+result-5d57b59f4b-66g4h   1/1     Running   0          2m53s
+vote-94849dc97-cdb4m      1/1     Running   0          23s
+worker-dd46d7584-sw7kr    1/1     Running   0          2m52s
+
+Note: Voting pod is recreated (new ID) and the service is not disrupted. No data loss in DB.
+
+5) Deleting working pod
+[root@ip-172-31-25-170 k8s-specifications]# kubectl get po
+NAME                      READY   STATUS    RESTARTS   AGE
+db-b54cd94f4-bw8wq        1/1     Running   0          9m2s
+redis-868d64d78-vdrvj     1/1     Running   0          9m2s
+result-5d57b59f4b-66g4h   1/1     Running   0          9m2s
+vote-94849dc97-cdb4m      1/1     Running   0          6m32s
+worker-dd46d7584-hdz7c    1/1     Running   0          57s
+
+Note: Worker pod is recreated (new ID) and the service is not disrupted. No data loss in DB.
+
+5a) logs from worker pod
+
+[root@ip-172-31-25-170 k8s-specifications]# kubectl logs worker-dd46d7584-hdz7c
+Connected to db
+Found redis at 10.106.131.46
+Connecting to redis
+Processing vote for 'b' by 'b6c90e8433382dd3'
+Processing vote for 'b' by 'b6c90e8433382dd3'
+
+6) Delete DB pod
+
+[root@ip-172-31-25-170 k8s-specifications]# kubectl get po
+NAME                      READY   STATUS    RESTARTS   AGE
+db-b54cd94f4-kbxlk        1/1     Running   0          2m48s
+redis-868d64d78-vdrvj     1/1     Running   0          16m
+result-5d57b59f4b-66g4h   1/1     Running   0          16m
+vote-94849dc97-cdb4m      1/1     Running   0          13m
+worker-dd46d7584-hdz7c    1/1     Running   1          8m2s
+
+Note: Worker restarts a can not conncect to DB. Let's check worker logs.
+
+Npgsql.NpgsqlException: Exception while reading from stream ---> System.IO.EndOfStreamException: Attempted to read past the end of the stream.
+   at Npgsql.ReadBuffer.Ensure(Int32 count, Boolean dontBreakOnTimeouts)
+   --- End of inner exception stack trace ---
+   at Npgsql.ReadBuffer.Ensure(Int32 count, Boolean dontBreakOnTimeouts)
+   at Npgsql.NpgsqlConnector.DoReadMessage(DataRowLoadingMode dataRowLoadingMode, Boolean isPrependedMessage)
+   at Npgsql.NpgsqlConnector.ReadMessageWithPrepended(DataRowLoadingMode dataRowLoadingMode)
+   at Npgsql.NpgsqlConnector.ReadExpecting[T]()
+   at Npgsql.NpgsqlDataReader.NextResultInternal()
+   at Npgsql.NpgsqlDataReader.NextResult()
+   at Npgsql.NpgsqlCommand.Execute(CommandBehavior behavior)
+   at Npgsql.NpgsqlCommand.ExecuteNonQueryInternal()
+   at Worker.Program.Main(String[] args) in /code/src/Worker/Program.cs:line 54
+
+
+
+
+The issue is on result:
+
+# kubectl logs result-5d57b59f4b-66g4h
+...
+Connected to db
+Error performing query: Error: This socket has been ended by the other party
+...
+
+As result pod is connected via socket and the socket is closed it can not fetch current state in DB.
+
+The solution is to delete result pod. It gets recreated, reconnects and it runs again.
+
+
+
+
